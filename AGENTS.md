@@ -1,38 +1,79 @@
-# Attention Firewall — project instructions
+# Attention Firewall — agent instructions
 
-## Start every task here
+## Start here
 
-- Read `PROJECT_BRIEF.md` in full before making project decisions. It is the source of truth for scope, architecture, and the experiment.
-- Inspect the task's checkout before acting: confirm the repository root, current branch, and `git status --short --untracked-files=all`. Preserve existing changes.
-- Use the checkout supplied by the task. In the current Codex Cloud setup, `/workspace/attention-firewall` is the expected path; verify it rather than assuming. Cloud tasks are already isolated, so do not create a Git worktree unless the user asks.
-- The project is currently in visual and interaction design. The repository has no application runtime or established test suite unless inspection shows it has changed. Do not choose a stack, add dependencies, or create infrastructure before the user validates the design.
+- Read `PROJECT_BRIEF.md` in full before making product, UX, architecture, or implementation decisions. It is the source of truth for the experiment.
+- Inspect the repository state before changing anything: current branch, existing files, manifests, lockfiles, and pending changes.
+- Preserve existing user work. Do not overwrite, revert, or restructure unrelated changes.
+- The project is currently **design first**. Do not add infrastructure, dependencies, model integration, or backend complexity before the relevant interaction/design direction is validated.
 
 ## Product invariants
 
-- Attention Firewall is a focused experiment in contextual interruption decisions, not a production notification app, operating-system integration, or general assistant.
-- Keep the separation visible: the model estimates urgency, importance, and interrupt-worthiness; a deterministic policy selects `INTERRUPT`, `SILENT`, or `LATER`.
-- The attention threshold is central. The same event may receive a different policy outcome as context or the threshold changes, while its model estimates remain fixed.
-- Treat rules in an unvalidated visual candidate as provisional. In particular, do not treat candidate thresholds or urgency/importance cutoffs as settled product policy until the user validates them.
-- Keep model scores in prototypes clearly identified as simulated. Do not imply that a model, backend, or notification integration is running when it is not.
-- Preserve the brief's exclusions and keep each addition tied to proving the experiment or clarifying its demo.
+- Attention Firewall is a focused experiment in contextual interruption decisions, not a production notification app, OS integration, or general assistant.
+- Keep the core separation explicit:
+  - the **decision model** estimates `urgency`, `importance`, and `interrupt_worthy`;
+  - a **deterministic policy** selects `INTERRUPT`, `SILENT`, or `LATER`.
+- Notification categories are **semantic context**, not direct action rules.
+- The user-facing attention modes are:
+  - `Open`
+  - `Focused`
+  - `Protected`
+- `Open` is the default mode.
+- The exact interruption threshold is an internal implementation detail. Do not expose it as a primary user setting.
+- Context such as recent interruptions and current activity may adjust the effective threshold deterministically.
+- `Protected` is not equivalent to Do Not Disturb: highly justified events may still interrupt.
+- Critical overrides must remain narrow, explicit, deterministic, and testable.
+- Keep simulated scores and behavior clearly identified as simulated until real model integration exists.
+- Preserve the exclusions and scope boundaries defined in `PROJECT_BRIEF.md`.
 
-## Visual and interaction direction
+## Design and interaction rules
 
-- Follow the user's visual direction: minimalist, sleek, clean-lined, Apple-inspired, and close to a notification window or notification page. Use matte black, white, and neutral grays. Avoid bright colors, AI gradients or glows, and dashboard-like framing.
-- For visual work, read the relevant current skills from `https://github.com/emilkowalski/skills`: at minimum `skills/prototype/SKILL.md`, `skills/apple-design/SKILL.md`, and `skills/emil-design-eng/SKILL.md`. For mobile work, also read `skills/mobile-native/SKILL.md`. If the prototype workflow is used, consult its `PICKER.md` and follow its picker requirements.
-- Apply those skills in service of the user's direction; generic skill defaults do not override the project's palette, notification-first composition, or validated decisions. If a skill source cannot be accessed, say so and do not claim to have read it.
-- Design interaction and visual treatment together. Keep motion restrained, responsive, interruptible where appropriate, and respectful of reduced-motion preferences. Make controls functional in a prototype; label simulated behavior honestly.
-- When exploring, make variants meaningfully different by layout, density, hierarchy, or interaction model—not merely by color. Keep exploration separate from production code until the user selects a direction.
+- The core interface should feel closer to a **notification/system component** than to a dashboard or SaaS product.
+- Favor:
+  - compact layouts;
+  - restrained visual hierarchy;
+  - calm, precise interaction;
+  - native-like notification behavior;
+  - minimal but meaningful motion.
+- Avoid:
+  - dashboard sidebars;
+  - KPI grids;
+  - generic AI gradients or glows;
+  - chat-style interfaces;
+  - unnecessary charts;
+  - startup-style marketing framing.
+- Treat exact visual choices such as palette, typography, spacing, motion, and platform influence as **design decisions to validate**, not permanent assumptions.
+- Present reviewable visual/interaction candidates before integrating a direction.
+- Variants should differ meaningfully in hierarchy, density, layout, or interaction model—not merely by color.
+- The main notification card should prioritize the human-facing state first; exact model scores and threshold details belong in deeper technical explanation states.
 
-## Workflow and validation
+## Implementation discipline
 
-1. Establish repository state and relevant instructions before changing files.
-2. For design work, present a reviewable candidate and explain its interactions and any provisional decisions. Do not integrate a direction before the user chooses or approves it.
-3. Before implementation, inspect the project's current manifests, lockfiles, and source structure. Add only the runtime and checks required by the validated design.
-4. Run existing, relevant validation commands when implementation exists. Never invent test results or claim visual/browser verification that was not actually performed; state any unavailable check plainly.
-5. Summarize the files changed, behavior, validation performed, and remaining decisions in clear terms.
+- Build only what the validated design requires.
+- Derive the frontend data model and API contract from the validated interaction states.
+- Keep dependencies and infrastructure minimal.
+- Do not introduce authentication, production databases, background workers, notification listeners, RAG, vector stores, fine-tuning, or other out-of-scope systems unless the project scope is explicitly expanded.
+- When implementation exists, run the relevant validation commands that are actually available.
+- Never claim a test, browser check, model call, latency measurement, or visual verification that was not performed.
+- If a required check is unavailable, state that plainly.
+
+## Workflow
+
+1. Read `PROJECT_BRIEF.md`.
+2. Inspect the current repository state.
+3. Identify the current project phase and validated decisions.
+4. For design work, produce a reviewable candidate before implementation.
+5. After validation, implement only the required behavior.
+6. Run relevant checks.
+7. Summarize:
+   - files changed;
+   - behavior implemented;
+   - validation performed;
+   - remaining decisions or limitations.
 
 ## Git and synchronization
 
-- Do not commit, push, publish, or otherwise synchronize project changes to GitHub until the user explicitly validates those changes or explicitly asks to synchronize/publish them.
-- Local work and reviewable candidates may be prepared before that point. Preserve user changes and never force-push.
+- Do not commit, push, publish, merge, or otherwise synchronize project changes to GitHub until the user explicitly validates those changes or explicitly asks to synchronize/publish them.
+- Never force-push.
+- Preserve existing branches and user changes unless explicitly instructed otherwise.
+- Important product, UX, architecture, evaluation, or workflow decisions should be reflected in repository documentation so a new session can reconstruct the project without relying on chat history.
