@@ -147,106 +147,271 @@ A conventional generative LLM may later be added as an optional comparison basel
 
 ---
 
-## 5. Minimal context
+## 5. Notification categories and minimal context
+
+Categories describe **what kind of event a notification is**. They do not decide whether it interrupts the user.
+
+The same category can contain events with radically different urgency and importance. For example, both of these belong to security / finance:
+
+- "Your monthly statement is ready."
+- "A new device just logged into your account."
+
+The first may reasonably be delayed; the second may deserve immediate attention.
+
+The initial semantic categories are:
+
+- **security / finance** — login alerts, card payments, fraud warnings, password changes, banking events;
+- **logistics / transport** — deliveries, drivers waiting, train delays, boarding changes;
+- **messaging / personal** — family, friends, direct messages, group chats;
+- **work / operational** — Slack/Teams events, incidents, approvals, deadlines, meeting-related events;
+- **social** — likes, follows, comments, non-essential social activity;
+- **commercial / promotional** — sales, recommendations, newsletters, retention notifications.
+
+Category should be treated as **semantic context / prior**, never as the final decision.
+
+A notification should still be evaluated through the decision-model dimensions:
+
+```text
+category            = security
+urgency             = 0.94
+importance          = 0.91
+interrupt_worthy    = 0.96
+```
+
+or:
+
+```text
+category            = security
+urgency             = 0.18
+importance          = 0.55
+interrupt_worthy    = 0.22
+```
+
+### Minimal V0.1 state
 
 Do not feed the system every possible personal signal.
 
 The first experiment should use only a small amount of context sufficient to create meaningful conflicts.
 
-Recommended V0.1 state:
+Recommended state:
 
 ```json
 {
   "notification": {
-    "source": "messaging",
+    "category": "messaging",
+    "source": "WhatsApp",
     "sender_relationship": "close_friend",
     "text": "I'm downstairs"
   },
   "context": {
     "activity": "deep_work",
     "local_time": "19:42",
-    "interruptions_last_hour": 5
+    "interruptions_last_hour": 5,
+    "attention_mode": "open"
   }
 }
 ```
 
 ### Notification fields
 
-- source/application category
-- sender relationship
-- notification text
+- semantic category;
+- source/application;
+- sender relationship;
+- notification text.
 
 ### Context fields
 
-- current activity
-- local time / day context
-- interruptions during a recent window
+- current activity;
+- local time / day context;
+- interruptions during a recent window;
+- user-selected attention mode.
 
 Potential activities:
 
-- deep work
-- meeting
-- commuting
-- relaxing
-- sleeping
-- free / idle
+- deep work;
+- meeting;
+- commuting;
+- relaxing;
+- sleeping;
+- free / idle.
 
 Avoid unnecessary context unless the experiment demonstrates that it is required.
 
 In particular, V0.1 does **not** require:
 
-- GPS/location
-- smartwatch data
-- full calendar integration
-- message history
-- contact history
-- device telemetry
-- browsing history
-- sleep tracking
+- GPS/location;
+- smartwatch data;
+- full calendar integration;
+- message history;
+- contact history;
+- device telemetry;
+- browsing history;
+- sleep tracking.
 
 ---
 
-## 6. Attention budget
+## 6. Attention state, dynamic threshold, and final policy
 
-The attention budget is a core differentiator and should exist in V0.1.
+The internal system uses a **dynamic interruption threshold**, but the user should not be asked to manipulate a percentage.
 
-However, it should remain deterministic and simple.
+The front experience uses three categorical attention states:
 
-The preferred interpretation is **a dynamic interruption threshold**, rather than a gamified point balance.
+- **Open** — useful notifications can interrupt relatively easily;
+- **Focused** — only clearly important or time-sensitive notifications should interrupt;
+- **Protected** — only strongly justified interruptions should break through.
+
+### Default state
+
+**Open is the default.**
+
+The product should start permissively:
+
+> **Start open, earn trust, then let the user choose more protection.**
+
+This reduces the feeling that the system is immediately taking control of the user's notifications.
+
+### UX representation
+
+The normal interface should expose something like:
+
+```text
+Attention
+[ Open ] [ Focused ] [ Protected ]
+   ●
+```
+
+or, in an even more compact state:
+
+```text
+Attention · Open
+```
+
+Do **not** show an attention percentage in the normal experience.
+
+### Internal mapping
+
+Internally, each state maps to a baseline interruption threshold. Exact values remain implementation parameters rather than promises, but an initial model could resemble:
+
+```text
+Open       → baseline ≈ 0.58
+Focused    → baseline ≈ 0.72
+Protected  → baseline ≈ 0.86
+```
+
+The selected attention state is only the **baseline**.
+
+The effective threshold can then be adjusted deterministically by context:
+
+```text
+effective threshold
+=
+mode baseline
++ recent interruption pressure
++ activity pressure
++ optional time-of-day adjustment
+```
 
 Example:
 
 ```text
-0 recent interruptions  → threshold = 0.60
-3 recent interruptions  → threshold = 0.72
-7 recent interruptions  → threshold = 0.86
+Focused baseline              0.72
+recent interruption pressure +0.08
+deep work adjustment         +0.06
+----------------------------------
+effective threshold           0.86
 ```
 
-If the model returns:
+During relaxed free time:
 
 ```text
-interrupt_worthy = 0.78
+Open baseline                 0.58
+free activity                +0.00
+1 recent interruption        +0.02
+----------------------------------
+effective threshold           0.60
 ```
 
-then:
+This preserves the core property:
+
+> **The same semantic notification can result in a different final action because the user's attention state changed, without changing the model's semantic evaluation.**
+
+### Final policy
+
+The model estimates semantics.
+
+The policy applies the current threshold and converts those estimates into an action.
+
+Conceptually:
 
 ```text
-threshold = 0.65
+if critical_override:
+    INTERRUPT
+
+elif interrupt_worthy >= effective_threshold:
+    INTERRUPT
+
+elif urgency >= silent_threshold
+     or importance >= silent_threshold:
+    SILENT
+
+else:
+    LATER
+```
+
+This gives the three outcomes a clear meaning:
+
+- **INTERRUPT** — worthy of breaking the user's current attention;
+- **SILENT** — useful now, but not worth interrupting;
+- **LATER** — useful enough to retain, but better batched for later.
+
+The attention threshold should regulate **interruption**, not rewrite the semantic meaning of the notification.
+
+For example, the model may still judge an event moderately important while the policy concludes that, after several recent interruptions, moderately important is no longer enough to break focus.
+
+### Critical override
+
+A very small set of hard policy overrides should exist so that increased protection does not become absurdly aggressive.
+
+For example, a notification with both extremely high urgency and importance may bypass normal interruption pressure:
+
+```text
+urgency > critical_urgency_threshold
+AND
+importance > critical_importance_threshold
 → INTERRUPT
 ```
 
-but later:
+Typical candidates include:
 
-```text
-threshold = 0.84
-→ SILENT
-```
+- suspicious financial activity;
+- security compromise;
+- a driver or delivery actively waiting;
+- major transport disruption immediately affecting the user;
+- a genuinely urgent operational incident.
 
-This creates an important property:
+The override must remain deterministic, explicit, narrow, and testable.
 
-> **The same notification can lead to a different final action because the user's attention state changed, without changing the model's semantic evaluation.**
+### Important distinction from Do Not Disturb
 
-That separation is important to preserve.
+**Protected is not Do Not Disturb.**
+
+Traditional Do Not Disturb mostly blocks everything except explicit exceptions.
+
+Protected instead means:
+
+> **Raise the standard, but continue evaluating each event.**
+
+A highly justified notification may still interrupt in Protected mode.
+
+### Information hierarchy
+
+The exact numeric threshold belongs in a deeper technical layer, not on the primary notification card.
+
+Recommended abstraction levels:
+
+1. **Normal user:** `Attention · Open`
+2. **Curious user:** attention mode + concrete context such as `5 recent interruptions · Deep work`
+3. **Technical detail:** exact effective threshold, model scores, and policy path
 
 ---
 
@@ -492,6 +657,8 @@ The demo should look like a system component or experimental interface, not like
 
 The first real design task is the notification component itself.
 
+The primary card should **not** expose the raw threshold percentage by default.
+
 A rough information hierarchy:
 
 ```text
@@ -506,36 +673,52 @@ A rough information hierarchy:
 │ urgency                    94%   │
 │ importance                 82%   │
 │                                  │
-│ Attention threshold        76%   │
+│ Attention · Open                 │
 │                                  │
 │ Why this decision?               │
 ╰──────────────────────────────────╯
 ```
 
-This is **not a final design**. It only captures the required information.
+This is **not a final design**. It only captures the required information hierarchy.
+
+A slightly more contextual primary/secondary state may show concrete pressure rather than an invented score:
+
+```text
+Attention · Focused
+5 recent interruptions · Deep work
+```
 
 When expanded, the component should make the architecture legible:
 
 ```text
-Decision
+Why this decision?
 
 Model
-interrupt-worthy           0.91
-urgency                    0.94
-importance                 0.82
+interrupt-worthy           0.78
+urgency                    0.63
+importance                 0.78
+
+Your attention
+Focused
+5 recent interruptions
+Deep work
 
 Policy
-current threshold          0.76
+effective threshold        0.84
 
 Result
-INTERRUPT
+SILENT
 ```
 
 The design should make clear that:
 
-- the model produced estimates;
-- the policy applied a threshold;
+- the model produced semantic estimates;
+- the user selected a categorical attention mode;
+- context adjusted the internal interruption threshold;
+- the deterministic policy applied that threshold;
 - the final action followed from the policy.
+
+The exact numeric threshold should be treated as a **technical explanation**, not a user-facing setting.
 
 ---
 
@@ -549,7 +732,9 @@ Before building the full interface, design at least these states:
 4. final `LATER`;
 5. expanded **Why this decision?** state;
 6. feedback state;
-7. attention threshold change after repeated interruptions.
+7. attention-state control with **Open / Focused / Protected**, defaulting to **Open**;
+8. internal threshold change after repeated interruptions or contextual pressure;
+9. a critical event bypassing normal threshold pressure.
 
 Animations and micro-interactions should remain restrained and functional.
 
@@ -668,9 +853,10 @@ Minimum intended deliverables:
 5. Clef and/or Jev comparison;
 6. accuracy, macro-F1, weighted interruption cost, and latency evaluation;
 7. basic probability calibration analysis;
-8. dynamic attention threshold;
-9. minimal interactive notification-like demo;
-10. lightweight feedback/personalization demonstration.
+8. categorical attention control (**Open / Focused / Protected**) with **Open as default**, backed by a dynamic internal threshold;
+9. deterministic critical-override policy;
+10. minimal interactive notification-like demo;
+11. lightweight feedback/personalization demonstration.
 
 A negative result is acceptable.
 
@@ -739,9 +925,11 @@ A new agent/chat taking over this project should:
 4. remain design-first;
 5. avoid expanding into a production notification application;
 6. keep the model/policy separation explicit;
-7. treat the attention threshold as a core feature;
-8. favor restrained, notification-like interaction design;
-9. document material decisions;
-10. never synchronize implementation changes without explicit user validation or instruction.
+7. preserve the categorical attention UX (**Open / Focused / Protected**) with **Open as default**, while keeping the exact threshold internal except in technical details;
+8. preserve semantic notification categories as context rather than direct action rules;
+9. keep the dynamic threshold and narrow critical override deterministic and explicit;
+10. favor restrained, notification-like interaction design;
+11. document material decisions;
+12. never synchronize implementation changes without explicit user validation or instruction.
 
 The immediate next deliverable should be a **visual candidate for the central notification component and its interaction states**, not backend code.
