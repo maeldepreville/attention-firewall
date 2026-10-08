@@ -1,6 +1,6 @@
 # Attention Firewall — Project Brief & Handoff
 
-> **Status:** agreed project definition, pre-implementation  
+> **Status:** approved frontend baseline (2026-10-08); simulated policy demo implemented  
 > **Repository:** `maeldepreville/attention-firewall`  
 > **Working principle:** design first; implementation follows the validated interaction and visual design.  
 > **Repository rule:** implementations and material project changes are synchronized to this repository only after explicit user validation or an explicit request to synchronize.
@@ -866,19 +866,13 @@ If handcrafted rules outperform the decision model, the project should report th
 
 ## 19. Current project phase
 
-**Current phase: visual and interaction design.**
+**Current phase: frontend approved; simulated demo implemented.**
 
-The next task is **not model integration**.
+On 2026-10-08, the user approved Site version 24 as the frontend baseline and explicitly requested synchronization to GitHub. Version 25 removes the candidate label from the footer and page title.
 
-The next task is to design the central notification component and its states until the visual language is convincing.
+The complete frontend lives in `dist/`, with local assets and the deterministic policy in `dist/policy.mjs`. Read `FRONTEND_BASELINE.md` for the authoritative current design, interaction states, actual policy parameters, and validation limitations. `CANDIDATE.md` records historical iterations.
 
-Once the component is validated:
-
-1. design the complete curated demo flow;
-2. define the minimal page/frame around it;
-3. derive the exact frontend data model;
-4. derive the model/policy API contract;
-5. implement only what the validated design requires.
+No model or backend is connected. The next technical phase may derive the model/policy API contract and build the bounded evaluation experiment described above; it has not been authorized or implemented in this synchronization. Preserve the approved frontend while working on later phases.
 
 ---
 
@@ -932,4 +926,5 @@ A new agent/chat taking over this project should:
 11. document material decisions;
 12. never synchronize implementation changes without explicit user validation or instruction.
 
-The immediate next deliverable should be a **visual candidate for the central notification component and its interaction states**, not backend code.
+The approved frontend is now implemented. Read `FRONTEND_BASELINE.md` and `README.md` after this brief to reconstruct the current state and run the demo. Do not restart visual candidate exploration or add model/backend infrastructure without the user's direction.
+

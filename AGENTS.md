@@ -5,7 +5,7 @@
 - Read `PROJECT_BRIEF.md` in full before making product, UX, architecture, or implementation decisions. It is the source of truth for the experiment.
 - Inspect the repository state before changing anything: current branch, existing files, manifests, lockfiles, and pending changes.
 - Preserve existing user work. Do not overwrite, revert, or restructure unrelated changes.
-- The project is currently **design first**. Do not add infrastructure, dependencies, model integration, or backend complexity before the relevant interaction/design direction is validated.
+- The project remains **design first**, and the frontend baseline was approved on 2026-10-08. Read `FRONTEND_BASELINE.md` and `README.md` after the brief. Preserve the approved visual and interaction design; backend/model integration and evaluation remain future work unless requested.
 
 ## Product invariants
 
@@ -42,7 +42,7 @@
   - chat-style interfaces;
   - unnecessary charts;
   - startup-style marketing framing.
-- Treat exact visual choices such as palette, typography, spacing, motion, and platform influence as **design decisions to validate**, not permanent assumptions.
+- The palette, composition, controls, and motion recorded in `FRONTEND_BASELINE.md` are approved. Future changes should follow the user's requested scope; do not reinterpret historical candidates as the current direction.
 - Present reviewable visual/interaction candidates before integrating a direction.
 - Variants should differ meaningfully in hierarchy, density, layout, or interaction model—not merely by color.
 - The main notification card should prioritize the human-facing state first; exact model scores and threshold details belong in deeper technical explanation states.
@@ -77,3 +77,4 @@
 - Never force-push.
 - Preserve existing branches and user changes unless explicitly instructed otherwise.
 - Important product, UX, architecture, evaluation, or workflow decisions should be reflected in repository documentation so a new session can reconstruct the project without relying on chat history.
+
