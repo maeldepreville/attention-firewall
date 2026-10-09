@@ -1,0 +1,40 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { Miniflare, Log, LogLevel, createFetchMock } from 'miniflare';
+for(const path of ['app.js','connection.mjs','policy.mjs','evaluation-config.mjs','styles.css','favicon.svg'])assert.deepEqual(fs.readFileSync('public/'+path),fs.readFileSync('dist/client/'+path),'Packaged asset drift: '+path);
+const config=JSON.parse(fs.readFileSync('dist/server/wrangler.json','utf8'));
+assert.equal(config.observability.enabled,false);assert.equal(config.observability.logs.enabled,false);
+assert.equal(fs.existsSync('dist/client/index.html'),false,'Root document must pass through the security-header route');
+const list=dir=>fs.readdirSync(dir,{withFileTypes:true}).flatMap(entry=>entry.isDirectory()?list(dir+'/'+entry.name):[dir+'/'+entry.name]);
+const paths=['dist/server/index.js',...list('dist/server').filter(path=>/\.m?js$/.test(path)&&path!=='dist/server/index.js')];
+// Exercise the runtime's actual fetch implementation, not just a JS fetch double.
+const mock=createFetchMock();mock.disableNetConnect();
+const accountId='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',token='fake-runtime-test-token-only';
+const upstream=mock.get('https://api.cloudflare.com');
+const endpoint={path:`/client/v4/accounts/${accountId}/ai/run/@cf/cloudflare/clef-flash`,method:'POST'};
+const typed={success:true,result:{model:'clef-flash',answers:{urgency:{type:'score',probabilities:{0:0,1:0,2:0,3:1},score:3},importance:{type:'score',probabilities:{0:0,1:0,2:0,3:1},score:3},interrupt_worthy:{type:'noul',noul:1}}}};
+upstream.intercept(endpoint).reply(200,JSON.stringify(typed)).times(2);
+upstream.intercept(endpoint).reply(401,JSON.stringify({success:false}));
+upstream.intercept(endpoint).reply(307,'',{headers:{location:'https://redirect-must-not-receive-credentials.test/'}});
+let redirectFollowed=false;
+mock.get('https://redirect-must-not-receive-credentials.test').intercept({path:'/',method:'POST'}).reply(()=>{redirectFollowed=true;return {statusCode:200,data:JSON.stringify(typed)};});
+const mf=new Miniflare({name:'attention-firewall-check',modules:paths.map(path=>({type:'ESModule',path})),compatibilityDate:config.compatibility_date,compatibilityFlags:config.compatibility_flags,log:new Log(LogLevel.NONE),bindings:{},fetchMock:mock});
+try{
+ const response=await mf.dispatchFetch('https://demo.test/');
+ if(response.status!==200)console.error('Root runtime response:',response.status,(await response.clone().text()).slice(0,2000));assert.equal(response.status,200);assert.match(response.headers.get('Cache-Control'),/no-store/);assert.match(response.headers.get('Content-Security-Policy'),/connect-src 'self'/);
+ const html=await response.text();assert(html.includes('Never saved by this demo.'));assert(html.includes('id="connection-screen"'));assert(html.includes('id="demo-screen" hidden inert'));assert(!html.includes('SIMULATED MODEL ESTIMATES'));
+ const invalid=await mf.dispatchFetch('https://demo.test/api/connect',{method:'POST',headers:{Origin:'https://demo.test','Content-Type':'application/json'},body:JSON.stringify({credentials:{accountId:'not-a-valid-account',token:'fake-test-token-only'}})});
+ assert.equal(invalid.status,400);assert.deepEqual(await invalid.json(),{status:'rejected',error:'invalid_request'});
+ const crossOrigin=await mf.dispatchFetch('https://demo.test/api/assess',{method:'POST',headers:{Origin:'https://evil.test','Content-Type':'application/json'},body:'{}'});assert.equal(crossOrigin.status,403);
+ const post=(path,body)=>mf.dispatchFetch('https://demo.test'+path,{method:'POST',headers:{Origin:'https://demo.test','Content-Type':'application/json'},body:JSON.stringify(body)});
+ const credentials={accountId,token};
+ const connected=await post('/api/connect',{credentials});assert.equal(connected.status,200);assert.deepEqual(await connected.json(),{status:'ok',error:null});
+ const now='2026-10-09T17:30:00Z';
+ const assessed=await post('/api/assess',{credentials,state:{notification:{category:'work',source:'Teams',text:'An active major incident requires immediate action.',received_at:now},evaluated_at:now},context:{mode:'protected',interruptions:8},calibration:0});
+ assert.equal(assessed.status,200);const result=await assessed.json();assert.equal(result.status,'ok');assert.deepEqual(result.estimates,{urgency:1,importance:1,interrupt_worthy:1});assert.equal(result.decision.action,'INTERRUPT');assert.equal(result.decision.critical,true);
+ const rejected=await post('/api/connect',{credentials});assert.equal(rejected.status,401);assert.deepEqual(await rejected.json(),{status:'provider_error',error:'credentials_rejected'});
+ const redirected=await post('/api/connect',{credentials});assert.equal(redirected.status,502);assert.deepEqual(await redirected.json(),{status:'provider_error',error:'service_unavailable'});assert.equal(redirectFollowed,false);
+ const pending=mock.pendingInterceptors();assert.equal(pending.length,1);assert.equal(pending[0].origin,'https://redirect-must-not-receive-credentials.test');
+ assert(!JSON.stringify(result).includes(token));assert(!JSON.stringify(result).includes(accountId));
+ console.log('PASS: compiled Worker serves the secure credential-first document, rejects invalid/cross-origin requests, connects and assesses through runtime fetch, reports rejected credentials, and refuses redirects. All upstream responses were mocked; no real token was used.');
+}finally{await mf.dispose();}

@@ -1,39 +1,43 @@
 # Attention Firewall
 
-An interactive experiment in contextual interruption decisions. The approved frontend runs entirely in the browser with eight simulated notifications, three attention modes, and a deterministic policy. No model or backend is connected yet.
+A compact experiment in contextual interruption decisions. Connect your own Cloudflare account, send a curated notification, and see real Clef-flash estimates turned into Interrupt, Silent or Later by a deterministic policy.
 
-[Open the demo](https://attention-firewall.smrdsh.chatgpt.site) (current Site access restrictions apply).
+[Open the demo](https://attention-firewall.smrdsh.chatgpt.site). Existing Site access restrictions apply.
 
-## Run locally
+## Try it
 
-Requires Python 3; there are no packages to install or build steps.
+1. Enter the Account ID and Workers AI API token you used for the offline run, or create a dedicated token in Cloudflare → Workers AI → Use REST API.
+2. Choose **Connect & enter demo**. This makes one small model request against your account.
+3. Use **Send notification** to cycle through 24 everyday and severe examples, then compare Open, Focused and Protected. Expand **Why this decision?** for the estimates and policy path.
+4. **Disconnect** or refresh to clear the connection and session state.
 
-```sh
-python3 -m http.server 8000 --directory dist
-```
+Credentials are kept only in the tab's memory and briefly by the backend while authenticating with Cloudflare. They are not persisted or logged by the demo. The card explains the transmission path and account usage. The demo receives no real OS notifications.
 
-Open `http://localhost:8000`. Use HTTP rather than opening `index.html` directly, because the demo uses JavaScript modules.
-
-## Check the frontend
-
-Requires Node.js 18 or later; no dependencies are needed.
-
-```sh
-node scripts/verify-frontend.mjs
-```
-
-The harness checks notification identity, cold start, sending/assessment ordering, repeated-send guards, attention changes, policy outcomes, calibration/Undo, critical override, queue looping, animation cleanup, reduced motion, unsupported/canceled animation, and curved-path geometry. It does not render a browser or verify visual appearance.
-
-## Project files
+## Source and checks
 
 | Path | Purpose |
 | --- | --- |
-| `dist/` | Complete static frontend, policy, favicon, and local assets |
-| `FRONTEND_BASELINE.md` | Current approved design, behavior, and limitations |
-| `PROJECT_BRIEF.md` | Experiment scope and planned technical evaluation |
-| `AGENTS.md` | Instructions for future work and synchronization |
-| `CANDIDATE.md` | Historical design iterations |
-| `ASSET_SOURCES.json` | Asset provenance |
-| `.openai/hosting.json` | Existing Site identity and static output configuration; no secrets |
+| `frontend/index.html`, `public/` | Approved notification interface, credential card and client modules |
+| `app/`, `server/` | Server document and request-local Cloudflare adapter |
+| `docs/LIVE_DEMO_INTEGRATION.md` | Behavior, privacy controls and verification limits |
+| `FRONTEND_BASELINE.md` | Approved visual/motion baseline and integration update |
+| `offline/` | Reproducible comparison runner, frozen overlays, reports and source evidence |
+| `offline/FINAL_TEST_REVIEW.md` | Audited final result and remaining critical failures |
+| `PROJECT_BRIEF.md`, `AGENTS.md` | Scope and handoff instructions |
 
-The frontend was approved on 2026-10-08 at Site version 24. Version 25 removes the candidate label. Model integration, the evaluation dataset, and benchmark results remain future work.
+```sh
+node scripts/prepare-demo.mjs
+node scripts/verify-live.mjs
+node scripts/verify-frontend.mjs
+python3 offline/run.py --revision af-eval-0.2 verify --lock offline/final-test.lock.json
+npm run build
+node scripts/verify-artifact.mjs
+```
+
+Requires the starter's Node/npm environment; run `npm run install:ci` when dependencies are absent. `npm run dev` starts the local server outside the managed Sites preview environment. `dist/` is generated Worker output, not the frontend source.
+
+## Evaluation
+
+The frozen `af-eval-0.2` test gives Clef-flash plus policy 0.329 weighted error cost and 78.2% label agreement, versus contextual rules 0.725 and 66.7%. All 36 model requests succeeded. Four related critical decisions stayed silent; the model caused 35 unnecessary interruptions versus seven for contextual rules. This is a small synthetic exploratory comparison, with mostly assistant-authored labels.
+
+Preserve both frozen releases and final evidence. Do not tune against test answers. The live demo uses the evaluated questions and policy unchanged, while optional session feedback is a separate interactive illustration.
