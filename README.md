@@ -44,7 +44,7 @@ Only notification text, source, category and grounded timestamps reach the model
 
 The three estimates are urgency, importance and intrinsic interruption probability. Policy uses Open / Focused / Protected baselines of 0.58 / 0.72 / 0.86, session interruption pressure and optional feedback. A critical bypass requires **urgency ≥ 0.75 and importance ≥ 0.95**. Otherwise a notification interrupts when its interruption probability reaches the current threshold; useful quieter events stay Silent, and low-severity events go to Later. The quiet severity boundary is 1/3.
 
-The evaluated `af-eval-0.2` question pack and policy retain their original byte identities. Build preparation checks their SHA-256 hashes. A provider failure produces **Silent with unavailable estimates**, rather than invented scores. Requests have a two-second provider deadline, one attempt and no automatic retries.
+The evaluated `af-eval-0.2` question pack and policy retain their original content. Build preparation checks their SHA-256 hashes after normalizing Windows CRLF line endings to LF; other changes still fail the check. A provider failure produces **Silent with unavailable estimates**, rather than invented scores. Requests have a two-second provider deadline, one attempt and no automatic retries.
 
 ## Credentials and privacy
 
@@ -61,7 +61,7 @@ npm run test:build
 npm start
 ```
 
-`npm test` checks policy boundaries, response validation, credential lifecycle and all 24 events through four motion scenarios. `test:build` exercises the compiled Worker with mocked provider responses, including successful inference, credential rejection and refusing redirects. These checks require no real token. After building, `npm start` serves the compiled app locally at **http://127.0.0.1:8787**.
+`npm test` checks LF/CRLF preparation, rejection of changed frozen payloads, policy boundaries, response validation, credential lifecycle and all 24 events through four motion scenarios. `test:build` exercises the compiled Worker with mocked provider responses, including successful inference, credential rejection and refusing redirects. These checks require no real token. After building, `npm start` serves the compiled app locally at **http://127.0.0.1:8787**.
 
 A clean install, build and compiled-runtime checks were verified on Linux with Node.js 24. Browser automation was unavailable; visual and live-account acceptance came from user testing. This is a demo, not an OS notification integration or a safety guarantee.
 
@@ -90,3 +90,4 @@ App names and icons belong to their respective owners. Their use illustrates sim
 | Unexpected response format | The hosted Clef-flash response may have changed; validation deliberately refuses it |
 | Old colors or examples after a hosted update | Refresh with Ctrl+Shift+R |
 | Local page or API unavailable | Keep `npm run dev` running and use its URL; confirm your Node version and run `npm ci` |
+| `Evaluated demo payload drift` on an older Windows clone | Run `git pull` then `npm run dev`. The update handles Windows line endings without changing the evaluated content. If it still fails, check for local edits to `server/frozen/`; do not bypass the integrity check. |

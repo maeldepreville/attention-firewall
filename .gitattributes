@@ -1,0 +1,4 @@
+# Keep source text consistent on every operating system, including Windows.
+* text=auto eol=lf
+*.jpg binary
+*.png binary
