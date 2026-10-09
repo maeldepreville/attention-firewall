@@ -1,43 +1,92 @@
 # Attention Firewall
 
-A compact experiment in contextual interruption decisions. Connect your own Cloudflare account, send a curated notification, and see real Clef-flash estimates turned into Interrupt, Silent or Later by a deterministic policy.
+A small experiment in deciding which notifications deserve your attention now. **Clef-flash estimates the meaning of a notification; a deterministic policy chooses Interrupt, Silent or Later.**
 
-[Open the demo](https://attention-firewall.smrdsh.chatgpt.site). Existing Site access restrictions apply.
+The demo contains 24 simulated notifications, real model requests, three attention modes and reversible session feedback. Its compact light interface was validated through direct user testing.
 
-## Try it
+[Open the hosted demo](https://attention-firewall.smrdsh.chatgpt.site) · [Read the project journey](PROJECT_JOURNEY.md)
 
-1. Enter the Account ID and Workers AI API token you used for the offline run, or create a dedicated token in Cloudflare → Workers AI → Use REST API.
-2. Choose **Connect & enter demo**. This makes one small model request against your account.
-3. Use **Send notification** to cycle through 24 everyday and severe examples, then compare Open, Focused and Protected. Expand **Why this decision?** for the estimates and policy path.
-4. **Disconnect** or refresh to clear the connection and session state.
+The hosted demo currently has private access. Anyone can run this public repository locally with their own Cloudflare account.
 
-Credentials are kept only in the tab's memory and briefly by the backend while authenticating with Cloudflare. They are not persisted or logged by the demo. The card explains the transmission path and account usage. The demo receives no real OS notifications.
+## Run it yourself
 
-## Source and checks
+You need Git, npm and **Node.js 22.13 or newer**. Node.js 24 was used for verification.
+
+```sh
+git clone https://github.com/maeldepreville/attention-firewall.git
+cd attention-firewall
+npm ci
+npm run dev
+```
+
+Open **http://localhost:5173**. Keep the terminal running while you use the demo; press Ctrl+C to stop it. Open the server URL rather than opening the HTML file directly: the model connection needs the local backend.
+
+### Get your Cloudflare credentials
+
+In the [Cloudflare dashboard](https://dash.cloudflare.com/), open **Workers AI → Use REST API**. Create a dedicated Workers AI API token through the offered template and copy the **Account ID** for the same account. If creating a custom token, Cloudflare's [REST API guide](https://developers.cloudflare.com/workers-ai/get-started/rest-api/) specifies Workers AI Read and Edit permissions. Restrict the token to the account you will use.
+
+Enter the Account ID and token in the demo's first screen, then choose **Connect & enter demo**. You do not need to put either value in a file, environment variable or source code. The token must have access to `@cf/cloudflare/clef-flash`.
+
+Connecting makes one small model request. Each **Send notification** makes another request against your account's Workers AI quota; Cloudflare's usage limits and charges apply.
+
+### What to try
+
+1. Send a notification. The front queued card becomes the central notification, followed by its decision.
+2. Switch between **Open, Focused and Protected**. This reapplies policy without another model call or changing the semantic estimates. Some events keep the same outcome in every mode.
+3. Expand **Why this decision?** and its technical details to inspect the estimates and policy path.
+4. Try feedback and **Undo**. Corrections change only the current session's category adjustment; they do not train the model.
+5. Try examples **9, 11, 19 and 21** in Protected mode for clear severe incidents. A critical result depends on the actual model estimates and is never guaranteed by an example.
+6. **Disconnect** or refresh to clear the connection and reset the session. The queue loops after all 24 examples.
+
+## How decisions work
+
+Only notification text, source, category and grounded timestamps reach the model. Display sender, attention mode, interruption count, feedback and previous notifications stay outside model input.
+
+The three estimates are urgency, importance and intrinsic interruption probability. Policy uses Open / Focused / Protected baselines of 0.58 / 0.72 / 0.86, session interruption pressure and optional feedback. A critical bypass requires **urgency ≥ 0.75 and importance ≥ 0.95**. Otherwise a notification interrupts when its interruption probability reaches the current threshold; useful quieter events stay Silent, and low-severity events go to Later. The quiet severity boundary is 1/3.
+
+The evaluated `af-eval-0.2` question pack and policy retain their original byte identities. Build preparation checks their SHA-256 hashes. A provider failure produces **Silent with unavailable estimates**, rather than invented scores. Requests have a two-second provider deadline, one attempt and no automatic retries.
+
+## Credentials and privacy
+
+Credentials stay in the current tab's memory and briefly in request-local backend memory. The fields are cleared on submission. Disconnect, refresh and leaving the page clear the connection; pending requests are canceled and late responses rejected.
+
+The application does not persist credentials in browser storage, cookies, files, environment settings, databases or caches, and does not log them. Worker application observability is disabled. Locally, authentication travels through your local backend and then to Cloudflare over HTTPS; on the hosted demo, both hops use HTTPS. Cloudflare must receive the token to authenticate. Hosting infrastructure and browser extensions are outside the application's control.
+
+## Checks and production build
+
+```sh
+npm test
+npm run build
+npm run test:build
+npm start
+```
+
+`npm test` checks policy boundaries, response validation, credential lifecycle and all 24 events through four motion scenarios. `test:build` exercises the compiled Worker with mocked provider responses, including successful inference, credential rejection and refusing redirects. These checks require no real token. After building, `npm start` serves the compiled app locally at **http://127.0.0.1:8787**.
+
+A clean install, build and compiled-runtime checks were verified on Linux with Node.js 24. Browser automation was unavailable; visual and live-account acceptance came from user testing. This is a demo, not an OS notification integration or a safety guarantee.
+
+## Repository map
 
 | Path | Purpose |
 | --- | --- |
-| `frontend/index.html`, `public/` | Approved notification interface, credential card and client modules |
-| `app/`, `server/` | Server document and request-local Cloudflare adapter |
-| `docs/LIVE_DEMO_INTEGRATION.md` | Behavior, privacy controls and verification limits |
-| `FRONTEND_BASELINE.md` | Approved visual/motion baseline and integration update |
-| `offline/` | Reproducible comparison runner, frozen overlays, reports and source evidence |
-| `offline/FINAL_TEST_REVIEW.md` | Audited final result and remaining critical failures |
-| `PROJECT_BRIEF.md`, `AGENTS.md` | Scope and handoff instructions |
+| `frontend/`, `public/` | Approved markup, styles, interactions and local icons |
+| `app/`, `server/` | Document/API routes, Cloudflare adapter and evaluated configuration |
+| `build/`, `vite.config.ts` | Worker build and required Sites integration |
+| `scripts/` | Build preparation, runtime checks and portable/managed build helpers |
+| `ASSET_SOURCES.json` | Sources for third-party icons and the supplied send mark |
+| `PROJECT_JOURNEY.md` | Development, evaluation results, limitations and next directions |
 
-```sh
-node scripts/prepare-demo.mjs
-node scripts/verify-live.mjs
-node scripts/verify-frontend.mjs
-python3 offline/run.py --revision af-eval-0.2 verify --lock offline/final-test.lock.json
-npm run build
-node scripts/verify-artifact.mjs
-```
+`dist/` is generated and ignored. The old offline runner, datasets and working documents are outside this demo checkout and remain in private project history. No model scores, policy thresholds or interface behavior were changed during repository cleanup. The hosted Site configuration belongs to this project's existing deployment; use your own project configuration when deploying a fork.
 
-Requires the starter's Node/npm environment; run `npm run install:ci` when dependencies are absent. `npm run dev` starts the local server outside the managed Sites preview environment. `dist/` is generated Worker output, not the frontend source.
+App names and icons belong to their respective owners. Their use illustrates simulated notifications and does not imply endorsement. The vendored Sites plugin retains its MIT license in `build/sites-vite-plugin.LICENSE`.
 
-## Evaluation
+## Troubleshooting
 
-The frozen `af-eval-0.2` test gives Clef-flash plus policy 0.329 weighted error cost and 78.2% label agreement, versus contextual rules 0.725 and 66.7%. All 36 model requests succeeded. Four related critical decisions stayed silent; the model caused 35 unnecessary interruptions versus seven for contextual rules. This is a small synthetic exploratory comparison, with mostly assistant-authored labels.
-
-Preserve both frozen releases and final evidence. Do not tune against test answers. The live demo uses the evaluated questions and policy unchanged, while optional session feedback is a separate interactive illustration.
+| Symptom | What to check |
+| --- | --- |
+| Connection rejected | Account ID, token, matching account scope and Workers AI permissions |
+| Usage limit reached | Your Cloudflare account's quota/rate limit; try again later |
+| Timeout or unavailable assessment | Network/provider availability; the notification remains available quietly |
+| Unexpected response format | The hosted Clef-flash response may have changed; validation deliberately refuses it |
+| Old colors or examples after a hosted update | Refresh with Ctrl+Shift+R |
+| Local page or API unavailable | Keep `npm run dev` running and use its URL; confirm your Node version and run `npm ci` |

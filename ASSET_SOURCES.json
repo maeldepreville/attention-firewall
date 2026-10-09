@@ -1,40 +1,40 @@
 [
   {
-    "file": "dist/assets/send-icon.png",
+    "file": "public/assets/send-icon.png",
     "bytes": 20180,
     "name": "Send notification icon",
     "source": "User-provided attachment image.png"
   },
   {
-    "file": "dist/assets/messages.jpg",
+    "file": "public/assets/messages.jpg",
     "bytes": 20552,
     "name": "Messages",
     "url": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/6b/cb/54/6bcb5406-4f41-73e9-dd06-37f4f608ed66/messagesCalistoga-0-0-1x_U007epad-0-1-0-85-220.png/512x512bb.jpg",
     "source": "https://apps.apple.com/us/app/messages/id1146560473?uo=4"
   },
   {
-    "file": "dist/assets/mail.jpg",
+    "file": "public/assets/mail.jpg",
     "bytes": 20869,
     "name": "Mail",
     "url": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/cf/9f/c1/cf9fc1be-6c0f-7e89-5620-5db8134bd4c3/mailCalistoga-0-0-1x_U007epad-0-1-0-85-220.png/512x512bb.jpg",
     "source": "https://apps.apple.com/us/app/mail/id1108187098?uo=4"
   },
   {
-    "file": "dist/assets/wallet.jpg",
+    "file": "public/assets/wallet.jpg",
     "bytes": 29876,
     "name": "Apple Wallet",
     "url": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/18/81/b7/1881b7e2-7323-4b41-9c34-43911b53c9d6/walletCalistoga-0-0-1x_U007ephone-0-1-0-85-220.png/512x512bb.jpg",
     "source": "https://apps.apple.com/us/app/apple-wallet/id1160481993?uo=4"
   },
   {
-    "file": "dist/assets/teams.jpg",
+    "file": "public/assets/teams.jpg",
     "bytes": 18307,
     "name": "Microsoft Teams",
     "url": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/5b/d9/40/5bd940d9-d71d-17b0-7515-8fff4d9e7aa4/AppIcon-0-0-1x_U007epad-0-1-0-0-85-220.png/512x512bb.jpg",
     "source": "https://apps.apple.com/us/app/microsoft-teams/id1113153706?uo=4"
   },
   {
-    "file": "dist/assets/instagram.jpg",
+    "file": "public/assets/instagram.jpg",
     "bytes": 46217,
     "name": "Instagram",
     "url": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/30/17/93/30179310-7a32-f8b3-5b31-a01addf6c367/Prod-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/512x512bb.jpg",
